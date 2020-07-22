@@ -62,112 +62,8 @@ public abstract class Logger {
      */
     private static boolean ansiEnabled;
 
-    /**
-     * Initialisation
-     */
-    public static synchronized void init() {
-        init(true);
-    }
-
-    /**
-     * Logger déjà initialisé ou non
-     *
-     * @return Initialisé
-     */
-    public static boolean isInitialized() {
-        return printWriter != null;
-    }
-
-    /**
-     * Initialisation
-     *
-     * @param enableAnsi Active l'ANSI ou non
-     */
-    public static synchronized void init(boolean enableAnsi) throws IllegalStateException {
-        ansiEnabled = enableAnsi;
-
-        if (isInitialized()) {
-            throw new IllegalStateException("Logger déjà initialisé");
-        }
-
-        boolean ok = false;
-        boolean dirCreated = false;
-        BufferedWriter bufferedWriter = null;
-
-        try {
-            dirCreated = new File(logPath).mkdir();
-            FileWriter fileWriter = new FileWriter(logPath + "/" + projectName + "_log_" + getDate() + ".log");
-            bufferedWriter = new BufferedWriter(fileWriter);
-
-            ok = true;
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        if (ok) {
-            printWriter = new PrintWriter(bufferedWriter);
-
-            info("Début des logs", LoggerOption.LOG_FILE_ONLY);
-
-            if (dirCreated) {
-                warning(
-                        "Le dossier contenant les logs n'existait pas, il a été créé. Path :",
-                        new File(logPath).getAbsolutePath()
-                );
-            }
-        }
-        else {
-            error("Erreur lors de la création de l'environnement de log");
-        }
-    }
-
-    /**
-     * Log générique
-     *
-     * @param where System.out, System.err, ou même possiblement ailleurs
-     * @param args Arguments (messages, options de log...)
-     * @param type Type de log (debug, warning...)
-     */
-    private static synchronized void genericLog(PrintStream where, Object[] args, LoggerType type) {
-        ArrayList<String> messages = new ArrayList<>();
-        ArrayList<LoggerOption> options = new ArrayList<>();
-
-        for (Object arg : args) {
-            if (arg instanceof LoggerOption) {
-                options.add((LoggerOption) arg);
-            }
-            else {
-                messages.add(String.valueOf(arg));
-            }
-        }
-
-        final String separator = " ";
-
-        StringBuilder message = new StringBuilder();
-
-        for (int i=0; i<messages.size(); i++) {
-            message.append(messages.get(i));
-
-            if (i != messages.size()-1) {
-                message.append(separator);
-            }
-        }
-
-
-        if (!options.contains(LoggerOption.LOG_FILE_ONLY)) {
-            if (ansiEnabled) {
-                where.println(type.getTextColor().getCode() + message.toString() + LoggerColor.ANSI_RESET.getCode());
-            }
-            else {
-                where.println(message.toString());
-            }
-        }
-
-        if (!options.contains(LoggerOption.LOG_CONSOLE_ONLY)) {
-            writeToFile(message.toString(), type);
-        }
-    }
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Méthodes de log
 
     /**
      * Info
@@ -217,6 +113,129 @@ public abstract class Logger {
     @SuppressWarnings("unused")
     public static void debug(Object... args) {
         genericLog(System.out, args, LoggerType.DEBUG);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Fonctions publiques
+
+    /**
+     * Initialisation
+     */
+    public static synchronized void init() {
+        init(true);
+    }
+
+    /**
+     * Initialisation
+     *
+     * @param enableAnsi Active l'ANSI ou non
+     */
+    public static synchronized void init(boolean enableAnsi) throws IllegalStateException {
+        ansiEnabled = enableAnsi;
+
+        if (isInitialized()) {
+            throw new IllegalStateException("Logger déjà initialisé");
+        }
+
+        boolean ok = false;
+        boolean dirCreated = false;
+        BufferedWriter bufferedWriter = null;
+
+        try {
+            dirCreated = new File(logPath).mkdir();
+            FileWriter fileWriter = new FileWriter(logPath + "/" + projectName + "_log_" + getDate() + ".log");
+            bufferedWriter = new BufferedWriter(fileWriter);
+
+            ok = true;
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        if (ok) {
+            printWriter = new PrintWriter(bufferedWriter);
+
+            info("Début des logs", LoggerOption.LOG_FILE_ONLY);
+
+            if (dirCreated) {
+                warning(
+                        "Le dossier contenant les logs n'existait pas, il a été créé. Path :",
+                        new File(logPath).getAbsolutePath()
+                );
+            }
+        }
+        else {
+            error("Erreur lors de la création de l'environnement de log");
+        }
+    }
+
+    /**
+     * Logger déjà initialisé ou non
+     *
+     * @return Initialisé
+     */
+    public static boolean isInitialized() {
+        return printWriter != null;
+    }
+
+    /**
+     * Pour quitter
+     */
+    public static synchronized void exit() {
+        if (isInitialized()) {
+            writeToFile("Fin des logs, fermeture", LoggerType.INFO);
+            printWriter.close();
+        }
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Fonctions privées
+
+    /**
+     * Log générique
+     *
+     * @param where System.out, System.err, ou même possiblement ailleurs
+     * @param args Arguments (messages, options de log...)
+     * @param type Type de log (debug, warning...)
+     */
+    private static synchronized void genericLog(PrintStream where, Object[] args, LoggerType type) {
+        ArrayList<String> messages = new ArrayList<>();
+        ArrayList<LoggerOption> options = new ArrayList<>();
+
+        for (Object arg : args) {
+            if (arg instanceof LoggerOption) {
+                options.add((LoggerOption) arg);
+            }
+            else {
+                messages.add(String.valueOf(arg));
+            }
+        }
+
+        final String separator = " ";
+
+        StringBuilder message = new StringBuilder();
+
+        for (int i=0; i<messages.size(); i++) {
+            message.append(messages.get(i));
+
+            if (i != messages.size()-1) {
+                message.append(separator);
+            }
+        }
+
+
+        if (!options.contains(LoggerOption.LOG_FILE_ONLY)) {
+            if (ansiEnabled) {
+                where.println(type.getTextColor().getCode() + message.toString() + LoggerColor.ANSI_RESET.getCode());
+            }
+            else {
+                where.println(message.toString());
+            }
+        }
+
+        if (!options.contains(LoggerOption.LOG_CONSOLE_ONLY)) {
+            writeToFile(message.toString(), type);
+        }
     }
 
     /**
@@ -292,16 +311,6 @@ public abstract class Logger {
             nbWrite ++;
 
             printWriter.flush();
-        }
-    }
-
-    /**
-     * Pour quitter
-     */
-    public static synchronized void exit() {
-        if (isInitialized()) {
-            writeToFile("Fin des logs, fermeture", LoggerType.INFO);
-            printWriter.close();
         }
     }
 }
